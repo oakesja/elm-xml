@@ -8,6 +8,7 @@ module Xml.Decode
         , bool
         , empty
         , list
+        , at
         , maybe
         , map
         , fail
@@ -38,7 +39,7 @@ decodeString : Decoder a -> String -> Result String a
 decodeString decoder string =
     parse decoder string
         |> fst
-        |> Result.formatError (List.head >> Maybe.withDefault "")
+        |> Result.formatError (String.join " ")
 
 
 
@@ -87,6 +88,11 @@ list decoder =
 (:=) : String -> Decoder a -> Decoder a
 (:=) key decoder =
     element (Combine.string key) decoder
+
+
+at : List String -> Decoder a -> Decoder a
+at keys decoder =
+    List.foldr (\key d -> element (Combine.string key) d) decoder keys
 
 
 

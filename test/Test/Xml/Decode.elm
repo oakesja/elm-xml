@@ -14,6 +14,7 @@ tests =
         , boolTest
         , emptyTest
         , listTest
+        , atTest
         , maybeTest
         , mapTest
         , failTest
@@ -93,6 +94,15 @@ listTest =
         , test "valid list with new lines" <|
             assertEqual (Ok [ 1, 2, 3 ]) <|
                 decodeString ("key" := list int) "<key>\n1\n2\n3\n</key>"
+        ]
+
+
+atTest : Test
+atTest =
+    suite "at"
+        [ test "valid path" <|
+            assertEqual (Ok "test") <|
+                decodeString (at [ "book", "author", "firstname" ] string) "<book><author><firstname>test</firstname></author></book>"
         ]
 
 
