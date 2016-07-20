@@ -8,10 +8,14 @@ module Xml.Decode
         , bool
         , empty
         , list
+        , maybe
+        , map
+        , fail
+        , succeed
         )
 
 import Combine exposing (Parser, parse, many, between, map, andThen, succeed, or, skipMany)
-import Combine.Char exposing (noneOf, space)
+import Combine.Char exposing (noneOf, space, oneOf)
 import Combine.Num
 import String
 
@@ -20,29 +24,30 @@ type alias Decoder a =
     Parser a
 
 
+
+-- TODO
+-- empty tags
+-- prolog
+-- self closing tags
+-- xpath
+-- error handling
+-- Run a decoder
+
+
 decodeString : Decoder a -> String -> Result String a
 decodeString decoder string =
     parse decoder string
         |> fst
-        |> Result.formatError
-            (\e ->
-                let
-                    _ =
-                        Debug.log "error" e
-                in
-                    "Failed to parse" ++ string
-            )
+        |> Result.formatError (List.head >> Maybe.withDefault "")
 
 
-(:=) : String -> Decoder a -> Decoder a
-(:=) key decoder =
-    element (Combine.string key) decoder
+
+-- Primatives
 
 
 string : Decoder String
 string =
-    map String.fromList
-        <| many (noneOf [ '<', '>' ])
+    map String.fromList anythingButTags
 
 
 int : Decoder Int
@@ -65,10 +70,54 @@ empty value =
     succeed value
 
 
+
+-- Objects
+-- at
+-- object1-8
+-- keyValuePairs
+-- dict
+
+
 list : Decoder a -> Decoder (List a)
 list decoder =
-    many
-        <| between (skipMany space) (skipMany space) decoder
+    many <|
+        between (skipMany whitespace) (skipMany whitespace) decoder
+
+
+(:=) : String -> Decoder a -> Decoder a
+(:=) key decoder =
+    element (Combine.string key) decoder
+
+
+
+-- Oddly shaped values
+-- oneOf
+-- andThen
+-- customDecoder
+
+
+maybe : Decoder a -> Decoder (Maybe a)
+maybe decoder =
+    Combine.maybe decoder
+
+
+map : (a -> b) -> Decoder a -> Decoder b
+map mapFunc decoder =
+    Combine.map mapFunc decoder
+
+
+fail : String -> Decoder a
+fail failureMsg =
+    Combine.fail [ failureMsg ]
+
+
+succeed : a -> Decoder a
+succeed value =
+    anythingButTags `andThen` (\_ -> Combine.succeed value)
+
+
+
+-- private
 
 
 true : Decoder Bool
@@ -94,3 +143,13 @@ endTag keyDecoder =
 element : Decoder String -> Decoder a -> Decoder a
 element keyDecoder valueDecoder =
     between (startTag keyDecoder) (endTag keyDecoder) valueDecoder
+
+
+whitespace : Decoder Char
+whitespace =
+    oneOf [ ' ', '\n', '\t', '\x0D' ]
+
+
+anythingButTags : Decoder (List Char)
+anythingButTags =
+    many (noneOf [ '<', '>' ])
