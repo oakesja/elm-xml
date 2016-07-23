@@ -1,6 +1,5 @@
 module Test.Xml.Decode exposing (tests)
 
-import String
 import ElmTest exposing (Test, suite, test, assertEqual)
 import Xml.Decode exposing (..)
 
@@ -16,6 +15,8 @@ tests =
         , listTest
         , atTest
         , maybeTest
+        , object1Test
+        , object2Test
         , mapTest
         , failTest
         , succeedTest
@@ -102,8 +103,64 @@ atTest =
     suite "at"
         [ test "valid path" <|
             assertEqual (Ok "test") <|
-                decodeString (at [ "book", "author", "firstname" ] string) "<book><author><firstname>test</firstname></author></book>"
+                decodeString (at [ "book", "author", "firstname" ] string)
+                    """
+                    <book>
+                        <author>
+                            <firstname>test</firstname>
+                        </author>
+                    </book>
+                    """
         ]
+
+
+object1Test : Test
+object1Test =
+    let
+        createAuthor obj1 =
+            { firstname = obj1 }
+
+        decoder =
+            object1 createAuthor ("firstname" := string)
+
+        expected =
+            createAuthor "john"
+    in
+        suite "object1"
+            [ test "apply the result of a decoder to a function" <|
+                assertEqual (Ok expected) <|
+                    decodeString decoder
+                        """
+                        <firstname>john</firstname>
+                        """
+            ]
+
+
+object2Test : Test
+object2Test =
+    let
+        createAuthor obj1 obj2 =
+            { firstname = obj1
+            , lastname = obj2
+            }
+
+        decoder =
+            object2 createAuthor
+                ("firstname" := string)
+                ("lastname" := string)
+
+        expected =
+            createAuthor "john" "doe"
+    in
+        suite "object2"
+            [ test "apply the result of a decoder to a function" <|
+                assertEqual (Ok expected) <|
+                    decodeString decoder
+                        """
+                            <firstname>john</firstname>
+                            <lastname>doe</lastname>
+                        """
+            ]
 
 
 maybeTest : Test

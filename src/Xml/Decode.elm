@@ -9,13 +9,15 @@ module Xml.Decode
         , empty
         , list
         , at
+        , object1
+        , object2
         , maybe
         , map
         , fail
         , succeed
         )
 
-import Combine exposing (Parser, parse, many, between, map, andThen, succeed, or, skipMany)
+import Combine exposing (Parser, parse, many, between, map, andThen, succeed, or, skipMany, manyTill)
 import Combine.Char exposing (noneOf, space, oneOf)
 import Combine.Num
 import String
@@ -73,7 +75,6 @@ empty value =
 
 
 -- Objects
--- at
 -- object1-8
 -- keyValuePairs
 -- dict
@@ -93,6 +94,17 @@ list decoder =
 at : List String -> Decoder a -> Decoder a
 at keys decoder =
     List.foldr (\key d -> element (Combine.string key) d) decoder keys
+
+
+object1 : (a -> res) -> Decoder a -> Decoder res
+object1 mapFunc decoder =
+    Combine.map mapFunc decoder
+
+
+object2 : (a -> b -> res) -> Decoder a -> Decoder b -> Decoder res
+object2 mapFunc d1 d2 =
+    Combine.map mapFunc d1
+        `andThen` \r1 -> Combine.map r1 d2
 
 
 
@@ -138,12 +150,12 @@ false =
 
 startTag : Decoder String -> Decoder String
 startTag keyDecoder =
-    between (Combine.string "<") (Combine.string ">") keyDecoder
+    between (manyTill whitespace (Combine.string "<")) (Combine.string ">") keyDecoder
 
 
 endTag : Decoder String -> Decoder String
 endTag keyDecoder =
-    between (Combine.string "</") (Combine.string ">") keyDecoder
+    between (manyTill whitespace (Combine.string "</")) (Combine.string ">") keyDecoder
 
 
 element : Decoder String -> Decoder a -> Decoder a
